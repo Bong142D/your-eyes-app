@@ -46,6 +46,15 @@ def login():
     return jsonify({"account_id": account["id"], "token": account["id"]}), 200
 
 
+@app.route("/accounts/<account_id>/devices", methods=["POST"])
+def pair_device(account_id):
+    db_path = get_db_path()
+    device_id = models.create_device(db_path, account_id)
+    if device_id is None:
+        return jsonify({"error": "Không tìm thấy tài khoản."}), 404
+    return jsonify({"device_id": device_id}), 201
+
+
 if __name__ == "__main__":
     get_db_path()
     port = int(os.environ.get("PORT", 5005))

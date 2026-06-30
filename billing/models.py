@@ -58,3 +58,23 @@ def get_account_by_email(db_path, email):
         return dict(row) if row else None
     finally:
         conn.close()
+
+
+def create_device(db_path, account_id):
+    conn = _connect(db_path)
+    try:
+        account = conn.execute(
+            "SELECT id FROM account WHERE id = ?", (account_id,)
+        ).fetchone()
+        if not account:
+            return None
+        device_id = uuid.uuid4().hex
+        now = datetime.utcnow().isoformat()
+        conn.execute(
+            "INSERT INTO device (id, account_id, paired_at) VALUES (?, ?, ?)",
+            (device_id, account_id, now),
+        )
+        conn.commit()
+        return device_id
+    finally:
+        conn.close()
