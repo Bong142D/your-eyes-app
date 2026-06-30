@@ -55,6 +55,15 @@ def pair_device(account_id):
     return jsonify({"device_id": device_id}), 201
 
 
+@app.route("/devices/<device_id>/status", methods=["GET"])
+def device_status(device_id):
+    db_path = get_db_path()
+    status = models.get_device_status(db_path, device_id)
+    if status is None:
+        return jsonify({"error": "Không tìm thấy thiết bị."}), 404
+    return jsonify(status), 200
+
+
 if __name__ == "__main__":
     get_db_path()
     port = int(os.environ.get("PORT", 5005))

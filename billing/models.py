@@ -2,7 +2,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timedelta
 
-from tiers import DEFAULT_TIER
+from tiers import DEFAULT_TIER, TIERS
 
 SCHEMA_PATH = __file__.replace("models.py", "schema.sql")
 
@@ -76,5 +76,45 @@ def create_device(db_path, account_id):
         )
         conn.commit()
         return device_id
+    finally:
+        conn.close()
+
+
+def _today_period():
+    return datetime.utcnow().strftime("%Y-%m-%d")
+
+
+def get_device_status(db_path, device_id):
+    conn = _connect(db_path)
+    try:
+        device = conn.execute(
+            "SELECT account_id FROM device WHERE id = ?", (device_id,)
+        ).fetchone()
+        if not device:
+            return None
+        account_id = device["account_id"]
+        sub = conn.execute(
+            "SELECT tier, expires_at FROM subscription WHERE account_id = ?",
+            (account_id,),
+        ).fetchone()
+        tier = sub["tier"] if sub else DEFAULT_TIER
+        now = datetime.utcnow().isoformat()
+        subscription_valid = bool(sub) and sub["expires_at"] > now
+        period = _today_period()
+        quota_row = conn.execute(
+            "SELECT used, limit_value FROM quota WHERE account_id = ? AND period = ?",
+            (account_id, period),
+        ).fetchone()
+        tier_info = TIERS.get(tier, TIERS[DEFAULT_TIER])
+        if quota_row:
+            remaining = max(0, quota_row["limit_value"] - quota_row["used"])
+        else:
+            remaining = tier_info["quota_limit"]
+        return {
+            "tier": tier,
+            "subscription_valid": subscription_valid,
+            "quota_remaining": remaining,
+            "allowed_intents": tier_info["allowed_intents"],
+        }
     finally:
         conn.close()
