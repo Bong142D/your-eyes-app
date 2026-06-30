@@ -64,6 +64,15 @@ def device_status(device_id):
     return jsonify(status), 200
 
 
+@app.route("/devices/<device_id>/consume", methods=["POST"])
+def consume(device_id):
+    db_path = get_db_path()
+    remaining = models.consume_quota(db_path, device_id)
+    if remaining is None:
+        return jsonify({"error": "Không tìm thấy thiết bị."}), 404
+    return jsonify({"quota_remaining": remaining}), 200
+
+
 if __name__ == "__main__":
     get_db_path()
     port = int(os.environ.get("PORT", 5005))

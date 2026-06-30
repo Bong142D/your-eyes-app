@@ -118,3 +118,42 @@ def get_device_status(db_path, device_id):
         }
     finally:
         conn.close()
+
+
+def consume_quota(db_path, device_id):
+    conn = _connect(db_path)
+    try:
+        device = conn.execute(
+            "SELECT account_id FROM device WHERE id = ?", (device_id,)
+        ).fetchone()
+        if not device:
+            return None
+        account_id = device["account_id"]
+        sub = conn.execute(
+            "SELECT tier FROM subscription WHERE account_id = ?", (account_id,)
+        ).fetchone()
+        tier = sub["tier"] if sub else DEFAULT_TIER
+        tier_limit = TIERS.get(tier, TIERS[DEFAULT_TIER])["quota_limit"]
+        period = _today_period()
+        row = conn.execute(
+            "SELECT used, limit_value FROM quota WHERE account_id = ? AND period = ?",
+            (account_id, period),
+        ).fetchone()
+        if row:
+            used = row["used"] + 1
+            limit_value = row["limit_value"]
+            conn.execute(
+                "UPDATE quota SET used = ? WHERE account_id = ? AND period = ?",
+                (used, account_id, period),
+            )
+        else:
+            used = 1
+            limit_value = tier_limit
+            conn.execute(
+                "INSERT INTO quota (account_id, period, used, limit_value) VALUES (?, ?, ?, ?)",
+                (account_id, period, used, limit_value),
+            )
+        conn.commit()
+        return max(0, limit_value - used)
+    finally:
+        conn.close()
