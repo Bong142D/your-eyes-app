@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  ocr-server-service:
+    profiles:
+      - glasses
+    build:
+      context: ./ocr-server
+      dockerfile: Dockerfile
+    container_name: inno_ocr_container
+    ports:
+      - "5004:5004"
+    environment:
+      - PORT=5004
+    restart: unless-stopped
+    volumes:
+      - ocr_models:/app/models
+
+  billing-service:
+    build:
+      context: ./billing
+      dockerfile: Dockerfile
+    container_name: inno_billing_container
+    ports:
+      - "5005:5005"
+    environment:
+      - PORT=5005
+      - BILLING_ENV=dev
+      - BILLING_DB_PATH=/app/data/billing.db
+      - GLASSES_SERVER_BASE_URL=http://ocr-server-service:5004
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-dev-internal-key}
+    restart: unless-stopped
+    volumes:
+      - billing_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5005/health', timeout=3)"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+volumes:
+  ocr_models:
+  billing_data:

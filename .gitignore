@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# DB / data
+*.db
+*.sqlite
+*.sqlite3
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Node / Expo (vision-care-app-demo)
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+*.tsbuildinfo
+.vercel
+.kotlin/
+/ios
+/android
+
+# OS
+.DS_Store
+Thumbs.db
